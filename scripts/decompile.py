@@ -64,9 +64,12 @@ def resolve_hyperframes_cmd() -> list[str] | None:
     hf = shutil.which("hyperframes")
     if hf:
         return [hf]
-    plugin_cli = Path(__file__).resolve().parents[2] / "hyperframes" / "scripts" / "plugin-cli.mjs"
-    if plugin_cli.is_file() and shutil.which("node"):
-        return ["node", str(plugin_cli)]
+    for plugin_cli in (
+        Path(__file__).resolve().parents[2] / "hyperframes" / "scripts" / "plugin-cli.mjs",
+        Path.home() / ".gemini" / "config" / "skills" / "hyperframes" / "scripts" / "plugin-cli.mjs",
+    ):
+        if plugin_cli.is_file() and shutil.which("node"):
+            return ["node", str(plugin_cli)]
     return None
 
 

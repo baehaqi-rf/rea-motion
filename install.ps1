@@ -1,11 +1,13 @@
 <#
 .SYNOPSIS
-    Installs REA Motion skills into Antigravity (~/.gemini/config/skills) and optional Python CV dependencies.
+    Installs REA Motion as a single unified Antigravity skill (~/.gemini/config/skills/rea-motion),
+    removes legacy fragmented skill folders, and installs Python CV/audio dependencies.
 #>
 [CmdletBinding()]
 param(
     [switch]$SkipPip,
-    [switch]$IncludeClaude
+    [switch]$IncludeClaude,
+    [switch]$KeepLegacy
 )
 
 $ErrorActionPreference = "Stop"
@@ -21,16 +23,31 @@ if ($IncludeClaude) {
     $targetRoots += (Join-Path $env:USERPROFILE ".claude\skills")
 }
 
-Write-Output "=== [2/3] Installing REA Motion skills ==="
-$skillsDir = Join-Path $repoRoot "skills"
-$skillFolders = Get-ChildItem -Path $skillsDir -Directory
+$legacyNames = @("hyperframes-motion-rea", "launch-video-clone", "reelmimic-styles", "local-hyperframes-pro")
+
+Write-Output "=== [2/3] Installing unified rea-motion skill ==="
 foreach ($destRoot in $targetRoots) {
     New-Item -ItemType Directory -Force -Path $destRoot | Out-Null
-    foreach ($sf in $skillFolders) {
-        $dest = Join-Path $destRoot $sf.Name
-        Copy-Item -Path $sf.FullName -Destination $dest -Recurse -Force
-        Write-Output "  Installed $($sf.Name) -> $dest"
+
+    if (-not $KeepLegacy) {
+        foreach ($old in $legacyNames) {
+            $oldPath = Join-Path $destRoot $old
+            if (Test-Path $oldPath) {
+                Remove-Item -Path $oldPath -Recurse -Force
+                Write-Output "  Removed redundant legacy skill: $oldPath"
+            }
+        }
     }
+
+    $dest = Join-Path $destRoot "rea-motion"
+    if (Test-Path $dest) {
+        Remove-Item -Path $dest -Recurse -Force
+    }
+    New-Item -ItemType Directory -Force -Path $dest | Out-Null
+    Get-ChildItem -Path $repoRoot -Force | Where-Object { $_.Name -ne ".git" } | ForEach-Object {
+        Copy-Item -Path $_.FullName -Destination $dest -Recurse -Force
+    }
+    Write-Output "  Installed rea-motion -> $dest"
 }
 
-Write-Output "=== [3/3] Done! Invoke 'rea-motion' in Antigravity or read README.md for copy-paste prompts. ==="
+Write-Output "=== [3/3] Done! Invoke 'rea-motion' in Antigravity (alongside core hyperframes skills). ==="

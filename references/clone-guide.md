@@ -5,11 +5,6 @@ description: Make product-launch / motion-graphics videos in HyperFrames, in thr
 
 # Launch Video Clone
 
-> **Windows 11 Hybrid 80/20 Integration (Antigravity):**
-> - Always set `$env:PYTHONUTF8 = "1"` and ensure WinGet FFmpeg is on `PATH` before running `scripts/*.py` (`scripts/round.ps1` does both automatically).
-> - Use **`powershell -ExecutionPolicy Bypass -File "$SKILL_DIR/scripts/round.ps1" <project> <renders> vN`** instead of `round.sh` (and `round_mb.ps1` instead of `round_mb.sh` only for clips <= 10s on 8 GB RAM; otherwise rely on HyperFrames native `data-motion-blur="on" data-motion-blur-shutter="360"`).
-> - Pair every project with **`VIDEO_MANIFEST.md`** (`local-video-studio/templates/VIDEO_MANIFEST.template.md`), **`beats.py`** (`beats.json`), **`unslop_check.py`**, and **`local-video-studio/GLOBAL_LESSONS.md`**.
-
 **Three modes. Pick one before anything else.**
 - **Original** (no reference video): you are making a launch video for a product from scratch.
   Go to **Original mode** below. It uses the type files, `references/motion-feel.md` and steps 3-7

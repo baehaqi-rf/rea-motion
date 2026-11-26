@@ -75,15 +75,8 @@ if (-not $Fps) {
 }
 
 # 2. Run deterministic Anti-Slop check if available
-$unslopCandidates = @(
-    (Join-Path $PSScriptRoot "unslop_check.py"),
-    (Join-Path (Split-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) -Parent) "scripts\unslop_check.py"),
-    (Join-Path $env:USERPROFILE ".gemini\config\skills\hyperframes-motion-rea\scripts\unslop_check.py"),
-    (Join-Path $env:USERPROFILE ".gemini\antigravity\scratch\rea-motion\scripts\unslop_check.py"),
-    (Join-Path $env:USERPROFILE ".gemini\antigravity\scratch\local-video-studio\scripts\unslop_check.py")
-)
-$unslopPy = $unslopCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
-if ($unslopPy) {
+$unslopPy = Join-Path $PSScriptRoot "unslop_check.py"
+if (Test-Path $unslopPy) {
     Write-Output "=== [1/5] Anti-Slop & Manifest Check ==="
     & python $unslopPy $compDir
 }
