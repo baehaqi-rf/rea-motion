@@ -275,6 +275,33 @@ def _optical_flow_pair(prev_gray: np.ndarray, curr_gray: np.ndarray) -> tuple[fl
     return mean_speed, p90_speed, mean_dx, mean_dy, radial_div
 
 
+def extract_seam_probe(
+    ffmpeg: str, video_path: Path, cut_sec: float, duration_sec: float, out_png: Path
+) -> str | None:
+    """Extract a 30fps 6x5 high-cadence contact grid (1.0s centered on cut_sec) to expose blur & seam motion."""
+    start_sec = max(0.0, min(max(0.0, duration_sec - 1.0), cut_sec - 0.5))
+    cmd = [
+        ffmpeg,
+        "-y",
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-ss",
+        f"{start_sec:.3f}",
+        "-t",
+        "1.0",
+        "-i",
+        str(video_path),
+        "-vf",
+        "fps=30,scale=640:-1,tile=6x5",
+        "-frames:v",
+        "1",
+        str(out_png),
+    ]
+    proc = subprocess.run(cmd, capture_output=True, text=True)
+    return out_png.name if proc.returncode == 0 and out_png.is_file() else None
+
+
 def classify_easing_and_motion(
     speeds: np.ndarray, dxs: np.ndarray, dys: np.ndarray, divs: np.ndarray
 ) -> dict[str, Any]:
@@ -678,8 +705,18 @@ def decompile_video(args: argparse.Namespace) -> Path:
     kinetic_shots: list[dict[str, Any]] = []
     brand_shots: list[dict[str, Any]] = []
     all_palette_hex: list[str] = []
+    seam_probes_dir = out_dir / "seam_probes"
+    seam_probe_files: list[str] = []
+    if args.seam_probes or args.seam_probe is not None:
+        seam_probes_dir.mkdir(parents=True, exist_ok=True)
+    if args.seam_probe is not None:
+        custom_name = extract_seam_probe(
+            ffmpeg, video_path, float(args.seam_probe), effective_dur, seam_probes_dir / "seam_custom.png"
+        )
+        if custom_name:
+            seam_probe_files.append(f"seam_probes/{custom_name}")
 
-    for shot in shots:
+    for idx, shot in enumerate(shots):
         sf = max(0, min(n_frames - 1, int(round(shot["start_sec"] * fps))))
         ef = max(sf + 1, min(n_frames, int(round(shot["end_sec"] * fps))))
 
@@ -693,6 +730,19 @@ def decompile_video(args: argparse.Namespace) -> Path:
         still_paths, strip_rel = save_shot_stills_and_filmstrip(
             frames, speeds, sf, ef, peak_local_in_shot, fps, shot["scene_id"], stills_dir, strips_dir, args.filmstrip_frames
         )
+
+        seam_probe_rel: str | None = None
+        if args.seam_probes and idx > 0 and len(seam_probe_files) < args.seam_probe_max:
+            probe_name = extract_seam_probe(
+                ffmpeg,
+                video_path,
+                shot["start_sec"],
+                effective_dur,
+                seam_probes_dir / f"seam_{shot['scene_id']}.png",
+            )
+            if probe_name:
+                seam_probe_rel = f"seam_probes/{probe_name}"
+                seam_probe_files.append(seam_probe_rel)
 
         hero_idx = min(n_frames - 1, sf + max(peak_local_in_shot, int(round((ef - sf) * 0.65))))
         tokens = extract_design_tokens(frames[hero_idx])
@@ -734,6 +784,7 @@ def decompile_video(args: argparse.Namespace) -> Path:
                 "word_cues": shot_words,
                 "stills": still_paths,
                 "filmstrip": strip_rel,
+                **({"seam_probe": seam_probe_rel} if seam_probe_rel else {}),
             }
         )
 
@@ -755,6 +806,7 @@ def decompile_video(args: argparse.Namespace) -> Path:
                 "audio_rhythm": audio_data["audio_engine"],
                 "stt": audio_data["stt_engine"],
             },
+            **({"seam_probes": seam_probe_files} if seam_probe_files else {}),
         },
         "KINETIC_DNA": {
             "bpm": audio_data["bpm"],
@@ -785,6 +837,9 @@ def main() -> int:
     parser.add_argument("--max-sec", type=float, default=None, help="Optional max seconds from start to analyze")
     parser.add_argument("--stt-model", default="small.en", help="faster-whisper model name")
     parser.add_argument("--no-stt", action="store_true", help="Skip word-level STT extraction")
+    parser.add_argument("--seam-probes", action="store_true", help="Extract 30fps tile=6x5 contact sheets across hard-cut seams")
+    parser.add_argument("--seam-probe", type=float, default=None, help="Extract one 30fps tile=6x5 seam probe centered at timestamp (sec)")
+    parser.add_argument("--seam-probe-max", type=int, default=8, help="Max seam probe grids to extract when --seam-probes is set")
     args = parser.parse_args()
 
     ledger_path = decompile_video(args)

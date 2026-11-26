@@ -7,7 +7,8 @@
 Instead of spreading overlapping tools across 5 separate skills, **REA Motion** unifies:
 - **CV Reference Cloning (`launch-video-clone`):** `burst.py`, `camtrack.py`, `camtrack_sift.py`, `cursortrack.py`, `colormatch.py`, `compare.py`, `sbs.py`, `types/*`, `subskills/*`, and Windows-native `round.ps1` / `round_mb.ps1`.
 - **21 Style & Art Medium Modules (`reelmimic-styles`):** `motion-doctrine`, `cut-the-curve`, `seam-craft`, `oversized-cursor`, `faceless-explainer`, `paper-cutout`, `painted-animation`, `anime-cel`, `whiteboard`, `pixel-art`, `crayon-storybook`, etc. (without `.claude` hooks or core `hyperframes` duplicates).
-- **Motion-REA Telemetry & Anti-Slop Layer:** `decompile.py` (`MOTION_LEDGER.json`), `visual_diff.py` (SSIM + Sobel Edge IoU + $\pm 3$-frame lag diff), `beats.py` (`scipy.signal` 20–150 Hz sub-bass + RMS + HyperFrames beats), `unslop_check.py`, `VIDEO_MANIFEST.template.md`, `brands/`, and `GLOBAL_LESSONS.md`.
+- **Motion-REA Telemetry & Anti-Slop Layer:** `decompile.py` (`MOTION_LEDGER.json` + `--seam-probes` 30fps `tile=6x5`), `visual_diff.py` (SSIM + Sobel Edge IoU + $\pm 3$-frame lag diff), `beats.py` (`scipy.signal` 20–150 Hz sub-bass + RMS + HyperFrames beats), `unslop_check.py` (incl. `--original`), `rhythm.py` (render cadence/dead-moment/metronome audit), `VIDEO_MANIFEST.template.md`, `brands/`, and `GLOBAL_LESSONS.md`.
+- **Deterministic Runtime Helpers (`lib/` & `vendor/`):** `lib/motion.js` (`logScale`, Catmull-Rom `path`, closed-form `spring`/`springFrames`, `E.bez`, seeded noise), `vendor/camera-dop.js` (`HFCameraDoP` 13 camera presets), `vendor/vfx-cgi-suite.js` (`HFVfxSuite` deterministic Canvas2D VFX), and offline `vendor/gsap.min.js`.
 
 ---
 
@@ -18,12 +19,15 @@ rea-motion/                        # Clone directly as a single skill or run ins
 ├── SKILL.md                       # Master router & 3-stage workflow
 ├── GLOBAL_LESSONS.md              # Compound cross-project rules & Windows/8GB RAM guardrails
 ├── install.ps1                    # Installs `rea-motion` to ~/.gemini/config/skills/rea-motion & removes legacy splits
+├── lib/                           # motion.js (frame-pure math/springs/logScale) + motion.test.js
+├── vendor/                        # Offline gsap.min.js, camera-dop.js (HFCameraDoP), vfx-cgi-suite.js (HFVfxSuite)
 ├── scripts/
 │   ├── beats.py                   # Sub-bass (20–150 Hz), snare flux, RMS & HyperFrames beat grid
-│   ├── decompile.py               # Video + audio -> MOTION_LEDGER.json (KINETIC_DNA vs BRAND_SKIN)
+│   ├── decompile.py               # Video + audio -> MOTION_LEDGER.json (KINETIC_DNA vs BRAND_SKIN) + 30fps seam probes
+│   ├── rhythm.py                  # Quantitative render rhythm check (dead moments, metronome, hard-stops, off-beat)
 │   ├── visual_diff.py             # Gate 1/2 SSIM + Sobel Edge IoU + lag offset + [Ref | Render | Diff] sheets
-│   ├── unslop_check.py            # Deterministic Anti-Slop & VIDEO_MANIFEST.md auditor
-│   ├── burst.py, camtrack.py, cursortrack.py, compare.py, sbs.py, ... (34 CV tools)
+│   ├── unslop_check.py            # Deterministic Anti-Slop & --original VIDEO_MANIFEST.md auditor
+│   ├── burst.py, camtrack.py, cursortrack.py, compare.py, sbs.py, ... (35 CV tools)
 │   └── round.ps1, round_mb.ps1, Run-BrainAutopilotVerify.ps1, Invoke-ReaVideoInspect.ps1
 ├── references/                    # clone-guide.md, ledger-schema.md, motion-feel.md, living-stills.md, examples/
 ├── types/                         # 6 clone blueprints (ui-showcase, abstract-3d-diagram, 3d-product, ...)
@@ -71,5 +75,7 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1
 Built on top of open-source work from:
 - [heygen-com/hyperframes](https://github.com/heygen-com/hyperframes) (Apache-2.0)
 - [per-simmons/launch-video-clone](https://github.com/per-simmons/launch-video-clone)
+- [02ui/02ui-video-copy](https://github.com/02ui/02ui-video-copy) (MIT — `lib/motion.js`, `rhythm.py`, `--original` lint rules)
+- [ThaddeusHackz/THE-AI-VIDEO-EDITOR](https://github.com/ThaddeusHackz/THE-AI-VIDEO-EDITOR) (`camera-dop.js`, `vfx-cgi-suite.js`, `motion-quality-gates`, seam probe workflows)
 - [edenfunf/reelmimic](https://github.com/edenfunf/reelmimic)
 - Anti-slop rules inspired by [pbakaus/impeccable](https://github.com/pbakaus/impeccable) and [heydamir/unslop](https://github.com/heydamir/unslop)

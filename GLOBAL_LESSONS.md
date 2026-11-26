@@ -13,3 +13,9 @@ Persistent engineering & motion-craft rules learned across production runs (`lau
 - **Intra-Shot Optical Flow:** Exclude frame `0` after a hard cut when measuring shot velocity so inter-shot pixel jumps do not masquerade as early motion peaks.
 - **Dead-Still Reads:** Once a hero headline or lyric phrase lands, hold it 100% still for `0.5s + 0.3s/word` (`>= 2.0s` on the final frame); shift continuous motion to the 3D stage (`hf-seek`) or subtle background scale (`1.0 -> 1.06`).
 - **Text Floor:** Keep all audited copy `>= 2.6%` of short frame side (`>= 29px` on `1080p`); mark purely decorative hairlines/watermarks with `data-layout-ignore`.
+
+## 3. Cherry-Picked Production Gates (v1.1)
+- **Opaque Stage Ground (`seam-craft`):** Always set an explicit opaque background on `#root` and scene containers (`background: var(--canvas-deep, #000)`) so cross-scene opacity dips never show Headless Chromium's default white canvas for 1 frame.
+- **Frame-Grid Snapping:** Snap scene/transition timestamps to exact multiples of `1 / fps` (`Math.floor(f) / fps`) so sub-frame offsets never cause uneven easing velocity at cut boundaries.
+- **High-Cadence Seam Probe (`30fps tile=6x5`):** Never judge transitions or motion blur from 1fps keyframes; use `decompile.py --seam-probes` (`ffmpeg -vf "fps=30,scale=640:-1,tile=6x5"`) around hard cuts.
+- **Broadcast & Critic Gates (`motion-quality-gates`):** Fail delivery on any unintended black frames (`blackdetect d=0.04`), unintended freezes (`freezedetect > 0.5s`), or audio clipping (`true-peak > -1 dBTP`). Require a Critic pass (`writer != critic`) listing `>= 3` concrete timestamped flaws before final render.

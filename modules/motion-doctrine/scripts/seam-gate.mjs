@@ -44,6 +44,16 @@ const CARRIER_POS_TOL = 12; // px center offset
 const CARRIER_SIZE_TOL = 0.05;
 
 const cleanup = [];
+function killChildTree(child) {
+  if (!child || !child.pid) return;
+  try {
+    if (process.platform === "win32") {
+      spawn("taskkill", ["/pid", String(child.pid), "/T", "/F"], { stdio: "ignore", windowsHide: true });
+    } else {
+      process.kill(-child.pid, "SIGTERM");
+    }
+  } catch {}
+}
 process.on("exit", () =>
   cleanup.forEach((fn) => {
     try {
@@ -95,17 +105,15 @@ async function ensureServer() {
         ? `node "${repoCli}" preview --foreground --no-open --port ${port}`
         : `npx --yes hyperframes preview --foreground --no-open --port ${port}`,
     );
-    const child = spawn("sh", ["-c", cmd.replace(/\{port\}/g, String(port))], {
+    const child = spawn(cmd.replace(/\{port\}/g, String(port)), {
       cwd: project,
       env,
       stdio: ["ignore", "pipe", "pipe"],
-      detached: true,
+      shell: true,
+      windowsHide: true,
+      detached: process.platform !== "win32",
     });
-    cleanup.push(() => {
-      try {
-        process.kill(-child.pid, "SIGTERM");
-      } catch {}
-    });
+    cleanup.push(() => killChildTree(child));
     base = `http://localhost:${port}`;
     const deadline = Date.now() + 120_000;
     while (Date.now() < deadline) {
@@ -131,6 +139,7 @@ async function ensureServer() {
 // ---------- chrome ----------
 function findChrome() {
   if (process.env.CHROME_PATH) return { bin: process.env.CHROME_PATH, headlessFlag: true };
+  const isWin = process.platform === "win32";
   const cache = join(homedir(), ".cache", "puppeteer");
   for (const kind of ["chrome-headless-shell", "chrome"]) {
     const root = join(cache, kind);
@@ -141,21 +150,35 @@ function findChrome() {
       for (const plat of readdirSync(vdir)) {
         const bin =
           kind === "chrome-headless-shell"
-            ? join(vdir, plat, "chrome-headless-shell")
-            : join(
-                vdir,
-                plat,
-                "Google Chrome for Testing.app",
-                "Contents",
-                "MacOS",
-                "Google Chrome for Testing",
-              );
+            ? join(vdir, plat, isWin ? "chrome-headless-shell.exe" : "chrome-headless-shell")
+            : isWin
+              ? join(vdir, plat, "chrome.exe")
+              : join(
+                  vdir,
+                  plat,
+                  "Google Chrome for Testing.app",
+                  "Contents",
+                  "MacOS",
+                  "Google Chrome for Testing",
+                );
         if (existsSync(bin)) return { bin, headlessFlag: kind !== "chrome-headless-shell" };
       }
     }
   }
-  const sys = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
-  if (existsSync(sys)) return { bin: sys, headlessFlag: true };
+  const sysCandidates = isWin
+    ? [
+        join(process.env.PROGRAMFILES || "C:\\Program Files", "Google", "Chrome", "Application", "chrome.exe"),
+        join(process.env["PROGRAMFILES(X86)"] || "C:\\Program Files (x86)", "Google", "Chrome", "Application", "chrome.exe"),
+        join(process.env.LOCALAPPDATA || "", "Google", "Chrome", "Application", "chrome.exe"),
+      ]
+    : [
+        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+        "/usr/bin/google-chrome",
+        "/usr/bin/chromium",
+      ];
+  for (const sys of sysCandidates) {
+    if (sys && existsSync(sys)) return { bin: sys, headlessFlag: true };
+  }
   throw new Error("no Chrome found (set CHROME_PATH)");
 }
 
@@ -172,12 +195,12 @@ async function launchChrome() {
     "about:blank",
   ];
   if (headlessFlag) args.unshift("--headless=new");
-  const child = spawn(bin, args, { stdio: ["ignore", "pipe", "pipe"], detached: true });
-  cleanup.push(() => {
-    try {
-      process.kill(-child.pid, "SIGKILL");
-    } catch {}
+  const child = spawn(bin, args, {
+    stdio: ["ignore", "pipe", "pipe"],
+    windowsHide: true,
+    detached: process.platform !== "win32",
   });
+  cleanup.push(() => killChildTree(child));
   const wsUrl = await new Promise((resolve, reject) => {
     let buf = "";
     const t = setTimeout(() => reject(new Error("chrome DevTools endpoint timeout")), 20_000);

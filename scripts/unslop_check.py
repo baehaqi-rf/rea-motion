@@ -15,6 +15,12 @@ from pathlib import Path
 from typing import Any
 
 SLOP_HEX_PATTERNS = re.compile(r"#(?:6366f1|8b5cf6|a855f7|ec4899|7c3aed)\b", re.IGNORECASE)
+DEFAULT_FONT_RE = re.compile(
+    r"font-family\s*:\s*[^;\"']*\b(Arial|Helvetica|system-ui|-apple-system|Roboto|Segoe UI)\b",
+    re.IGNORECASE,
+)
+SLIDE_UP_RE = re.compile(r"translateY\(\s*\$\{[^}]*\(\s*1\s*-|translateY\(\s*\d{2,}\s*px|\by\s*:\s*[2-9]\d\b")
+SKIP_DIR_PARTS = ("node_modules", ".git", "renders", "vendor")
 EMOJI_RE = re.compile(
     "["
     "\U0001F300-\U0001F5FF"
@@ -59,17 +65,20 @@ def check_manifest(project_dir: Path) -> list[dict[str, Any]]:
     return findings
 
 
-def audit_html_file(html_path: Path, is_root: bool, manifest_text: str) -> list[dict[str, Any]]:
+def audit_source_file(
+    file_path: Path, is_root: bool, manifest_text: str, original_mode: bool = False
+) -> list[dict[str, Any]]:
     findings: list[dict[str, Any]] = []
-    src = html_path.read_text(encoding="utf-8", errors="replace")
+    src = file_path.read_text(encoding="utf-8", errors="replace")
+    is_html = file_path.suffix.lower() in (".html", ".htm")
 
-    if is_root:
+    if is_root and is_html:
         if 'rel="icon"' not in src and "rel='icon'" not in src:
             findings.append(
                 {
                     "rule": "missing_favicon_guard",
                     "severity": "error",
-                    "file": str(html_path),
+                    "file": str(file_path),
                     "message": 'Add <link rel="icon" href="data:," /> in <head> to prevent 404 network/console errors.',
                 }
             )
@@ -78,25 +87,28 @@ def audit_html_file(html_path: Path, is_root: bool, manifest_text: str) -> list[
                 {
                     "rule": "missing_motion_blur",
                     "severity": "warning",
-                    "file": str(html_path),
+                    "file": str(file_path),
                     "message": 'Root composition lacks data-motion-blur="on" (recommended with shutter 360 for fast 2D moves).',
                 }
             )
 
-    # 1. Nondeterministic clock / loop traps
+    # 1. Nondeterministic clock / loop / CSS transition traps
     for pat, label in [
         (r"\brequestAnimationFrame\s*\(", "requestAnimationFrame()"),
         (r"\bsetInterval\s*\(", "setInterval()"),
         (r"\bDate\.now\s*\(", "Date.now()"),
-        (r"\bMath\.random\s*\(", "unseeded Math.random()"),
+        (r"\bperformance\.now\s*\(", "performance.now()"),
+        (r"\bnew Date\s*\(", "new Date()"),
+        (r"\bMath\.random\s*\(", "unseeded Math.random() (use M.rnd/mulberry32)"),
         (r"repeat\s*:\s*-1", "GSAP repeat: -1"),
+        (r"(?<![\w-])transition\s*:\s*(?!none)", "CSS transition (not seekable per-frame)"),
     ]:
         if re.search(pat, src):
             findings.append(
                 {
                     "rule": "nondeterministic_clock",
                     "severity": "error",
-                    "file": str(html_path),
+                    "file": str(file_path),
                     "message": f"Forbidden non-deterministic API `{label}` breaks frame-accurate HyperFrames seeking.",
                 }
             )
@@ -107,7 +119,7 @@ def audit_html_file(html_path: Path, is_root: bool, manifest_text: str) -> list[
             {
                 "rule": "infinite_css_animation",
                 "severity": "error",
-                "file": str(html_path),
+                "file": str(file_path),
                 "message": "CSS `animation: ... infinite` found; replace with finite step count matching root duration.",
             }
         )
@@ -118,7 +130,7 @@ def audit_html_file(html_path: Path, is_root: bool, manifest_text: str) -> list[
             {
                 "rule": "unpinned_grain_svg",
                 "severity": "warning",
-                "file": str(html_path),
+                "file": str(file_path),
                 "message": "SVG feTurbulence grain found without explicit `background-size: 256px 256px` tiling.",
             }
         )
@@ -129,7 +141,7 @@ def audit_html_file(html_path: Path, is_root: bool, manifest_text: str) -> list[
             {
                 "rule": "threejs_missing_preserve_buffer",
                 "severity": "error",
-                "file": str(html_path),
+                "file": str(file_path),
                 "message": "THREE.WebGLRenderer must set `preserveDrawingBuffer: true` for deterministic capture & QA.",
             }
         )
@@ -141,26 +153,69 @@ def audit_html_file(html_path: Path, is_root: bool, manifest_text: str) -> list[
             {
                 "rule": "ai_slop_palette",
                 "severity": "warning",
-                "file": str(html_path),
+                "file": str(file_path),
                 "message": f"Default AI purple/violet hex {sorted(set(slop_matches))} used without brand authorization in VIDEO_MANIFEST.md.",
             }
         )
 
-    # 6. Emoji inside visible HTML markup (strip comments and scripts first)
-    markup_only = re.sub(r"<script\b[^>]*>.*?</script>", "", src, flags=re.DOTALL | re.IGNORECASE)
-    markup_only = re.sub(r"<style\b[^>]*>.*?</style>", "", markup_only, flags=re.DOTALL | re.IGNORECASE)
-    markup_only = re.sub(r"<!--.*?-->", "", markup_only, flags=re.DOTALL)
-    if EMOJI_RE.search(markup_only):
+    # 6. Default safe-font fallback warning
+    if DEFAULT_FONT_RE.search(src):
         findings.append(
             {
-                "rule": "emoji_in_hero_copy",
+                "rule": "default_font_fallback",
                 "severity": "warning",
-                "file": str(html_path),
-                "message": "Emoji character detected in HTML markup; replace with crisp SVG vector or mono label.",
+                "file": str(file_path),
+                "message": "Generic system/safe font detected; declare measured brand/editorial fonts with @font-face or fonts/.",
             }
         )
 
-    # 7. Monotonous easing check (`power2.out` overuse)
+    # 7. Original-mode anti-slop bans (from 02ui/motionlint.py --original)
+    if original_mode:
+        if re.search(r"(?:-webkit-)?backdrop-filter\s*:", src, re.IGNORECASE):
+            findings.append(
+                {
+                    "rule": "original_glass_banned",
+                    "severity": "error",
+                    "file": str(file_path),
+                    "message": "Frosted glass (`backdrop-filter`) is banned in --original mode; use crisp solid/paper/ink surfaces.",
+                }
+            )
+        if re.search(r"radial-gradient\s*\(", src, re.IGNORECASE):
+            findings.append(
+                {
+                    "rule": "original_gradient_blob",
+                    "severity": "error",
+                    "file": str(file_path),
+                    "message": "Radial gradient blob banned in --original mode; use a flat ground or measured canvas field.",
+                }
+            )
+        slide_hits = len(SLIDE_UP_RE.findall(src))
+        if slide_hits > 0:
+            findings.append(
+                {
+                    "rule": "original_slide_up",
+                    "severity": "error" if slide_hits >= 3 else "warning",
+                    "file": str(file_path),
+                    "message": f"{slide_hits} slide-up-from-below entrance(s) detected; vary with mask reveals, motion cuts, or camera moves.",
+                }
+            )
+
+    # 8. Emoji inside visible HTML markup (strip comments and scripts first)
+    if is_html:
+        markup_only = re.sub(r"<script\b[^>]*>.*?</script>", "", src, flags=re.DOTALL | re.IGNORECASE)
+        markup_only = re.sub(r"<style\b[^>]*>.*?</style>", "", markup_only, flags=re.DOTALL | re.IGNORECASE)
+        markup_only = re.sub(r"<!--.*?-->", "", markup_only, flags=re.DOTALL)
+        if EMOJI_RE.search(markup_only):
+            findings.append(
+                {
+                    "rule": "emoji_in_hero_copy",
+                    "severity": "warning",
+                    "file": str(file_path),
+                    "message": "Emoji character detected in HTML markup; replace with crisp SVG vector or mono label.",
+                }
+            )
+
+    # 9. Monotonous easing check (`power2.out` overuse)
     eases = re.findall(r'ease\s*:\s*["\']([^"\']+)["\']', src)
     if len(eases) >= 4:
         p2_count = sum(1 for e in eases if e.strip() == "power2.out")
@@ -169,18 +224,18 @@ def audit_html_file(html_path: Path, is_root: bool, manifest_text: str) -> list[
                 {
                     "rule": "monotonous_default_ease",
                     "severity": "warning",
-                    "file": str(html_path),
+                    "file": str(file_path),
                     "message": f"{p2_count}/{len(eases)} tweens use flat `power2.out`; vary by role (`power4.out`, `expo.out`, `power3.inOut`, `power3.in`).",
                 }
             )
 
-    # 8. `tl.from(` seek-back drift warning inside sub-compositions
+    # 10. `tl.from(` seek-back drift warning inside sub-compositions
     if not is_root and re.search(r"\btl\.from\s*\(", src):
         findings.append(
             {
                 "rule": "gsap_from_seek_trap",
                 "severity": "warning",
-                "file": str(html_path),
+                "file": str(file_path),
                 "message": "Sub-composition uses `tl.from(...)`; prefer `tl.fromTo(...)` so re-seeking never drifts.",
             }
         )
@@ -188,7 +243,16 @@ def audit_html_file(html_path: Path, is_root: bool, manifest_text: str) -> list[
     return findings
 
 
-def run_audit(comp_dir: Path) -> dict[str, Any]:
+def _should_audit_asset(path: Path) -> bool:
+    if any(part in SKIP_DIR_PARTS for part in path.parts):
+        return False
+    name = path.name.lower()
+    if name == "motion.js" or ".min." in name or name in ("camera-dop.js", "vfx-cgi-suite.js"):
+        return False
+    return path.suffix.lower() in (".html", ".htm", ".js", ".mjs", ".css")
+
+
+def run_audit(comp_dir: Path, original_mode: bool = False) -> dict[str, Any]:
     findings = check_manifest(comp_dir)
     manifest_text = ""
     for candidate in (comp_dir / "VIDEO_MANIFEST.md", comp_dir.parent / "VIDEO_MANIFEST.md"):
@@ -196,17 +260,20 @@ def run_audit(comp_dir: Path) -> dict[str, Any]:
             manifest_text = candidate.read_text(encoding="utf-8", errors="replace")
             break
 
-    index_html = comp_dir / "index.html"
     files_scanned = 0
+    seen: set[Path] = set()
+    index_html = comp_dir / "index.html"
     if index_html.is_file():
         files_scanned += 1
-        findings.extend(audit_html_file(index_html, is_root=True, manifest_text=manifest_text))
+        seen.add(index_html.resolve())
+        findings.extend(audit_source_file(index_html, is_root=True, manifest_text=manifest_text, original_mode=original_mode))
 
-    sub_dir = comp_dir / "compositions"
-    if sub_dir.is_dir():
-        for p in sorted(sub_dir.rglob("*.html")):
-            files_scanned += 1
-            findings.extend(audit_html_file(p, is_root=False, manifest_text=manifest_text))
+    for p in sorted(comp_dir.rglob("*")):
+        if not p.is_file() or p.resolve() in seen or not _should_audit_asset(p):
+            continue
+        files_scanned += 1
+        seen.add(p.resolve())
+        findings.extend(audit_source_file(p, is_root=False, manifest_text=manifest_text, original_mode=original_mode))
 
     errors = [f for f in findings if f["severity"] == "error"]
     warnings = [f for f in findings if f["severity"] == "warning"]
@@ -214,6 +281,7 @@ def run_audit(comp_dir: Path) -> dict[str, Any]:
         "ok": len(errors) == 0,
         "composition_dir": str(comp_dir),
         "files_scanned": files_scanned,
+        "original_mode": original_mode,
         "error_count": len(errors),
         "warning_count": len(warnings),
         "findings": findings,
@@ -224,9 +292,14 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Motion-REA Impeccable/Unslop Deterministic Checker")
     parser.add_argument("composition_dir", help="Path to HyperFrames composition directory")
     parser.add_argument("--strict", action="store_true", help="Fail exit code on warnings as well as errors")
+    parser.add_argument(
+        "--original",
+        action="store_true",
+        help="Also enforce Original-mode bans (backdrop-filter glass, radial-gradient blobs, slide-up entrances)",
+    )
     args = parser.parse_args()
 
-    report = run_audit(Path(args.composition_dir).resolve())
+    report = run_audit(Path(args.composition_dir).resolve(), original_mode=args.original)
     print(json.dumps(report, indent=2))
     if report["error_count"] > 0 or (args.strict and report["warning_count"] > 0):
         return 1
