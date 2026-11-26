@@ -1,0 +1,54 @@
+{
+  "preset_id": "editorial_explainer",
+  "name": "Vox / Documentary Collage & Data Explainer",
+  "aspect_ratios": ["16:9", "9:16"],
+  "fps": 30,
+  "motion_blur": {
+    "enabled": true,
+    "shutter_angle": 270
+  },
+  "palette": {
+    "color_ground": "#F2EFE9",
+    "color_surface": "#E6E1D6",
+    "color_ink": "#141413",
+    "color_muted": "#57534E",
+    "color_accent": "#FF4F1F",
+    "color_highlight": "#FACC15",
+    "grid_line": "rgba(20, 20, 19, 0.14)"
+  },
+  "typography": {
+    "font_display": "Playfair Display",
+    "font_body": "Inter",
+    "font_mono": "IBM Plex Mono",
+    "hero_scale_vh": 8.0,
+    "subhead_scale_vh": 3.4,
+    "caption_scale_vh": 3.0,
+    "letter_spacing_display": "-0.02em"
+  },
+  "geometry": {
+    "card_radius_px": 8,
+    "border_width_px": 2,
+    "grid_cell_px": 48,
+    "action_safe_margin_pct": 10
+  },
+  "motion_grammar": {
+    "arrival_ease": "power4.out",
+    "arrival_duration_sec": 0.38,
+    "camera_ease": "power2.inOut",
+    "exit_ease": "power3.in",
+    "exit_duration_sec": 0.18,
+    "word_stagger_sec": 0.067,
+    "overlap_ratio": 0.35,
+    "avg_shot_duration_sec": 2.1
+  },
+  "preferred_registry_items": [
+    "paper-collage-reveal",
+    "vox-annotate",
+    "hw-callout-circle",
+    "data-chart",
+    "bar-chart-race",
+    "pan-stations",
+    "caption-clip-wipe",
+    "grain-overlay"
+  ]
+}

@@ -1,0 +1,26 @@
+# Compiled & scratch
+__pycache__/
+*.py[cod]
+*.log
+.DS_Store
+Thumbs.db
+
+# HyperFrames & media renders
+renders/
+.hyperframes/
+.rea_inspect/
+.motion_rea*/
+qa_stills*/
+node_modules/
+*.mp4
+*.mov
+*.webm
+*.mkv
+*.mp3
+*.wav
+*.lottie
+
+# Upstream clones & secrets
+upstream/
+.env
+.env.*

@@ -1,0 +1,51 @@
+{
+  "preset_id": "calm_3d_editorial",
+  "name": "Calm Tactile 3D Editorial (Flow Style A)",
+  "aspect_ratios": ["16:9", "9:16"],
+  "fps": 30,
+  "motion_blur": {
+    "enabled": true,
+    "shutter_angle": 240
+  },
+  "palette": {
+    "color_ground": "#F3F0E8",
+    "color_surface": "#F7F2EC",
+    "color_ink": "#153F33",
+    "color_ink_alt": "#2D2235",
+    "color_sage": "#C8D6C9",
+    "color_accent": "#63CDA9",
+    "color_warm_amber": "#EFB568"
+  },
+  "typography": {
+    "font_display": "EB Garamond",
+    "font_body": "Outfit",
+    "font_mono": "JetBrains Mono",
+    "hero_scale_vh": 7.2,
+    "subhead_scale_vh": 3.0,
+    "caption_scale_vh": 2.6,
+    "letter_spacing_display": "-0.02em"
+  },
+  "geometry": {
+    "card_radius_px": 24,
+    "pill_radius_px": 999,
+    "border_width_px": 1.5
+  },
+  "motion_grammar": {
+    "arrival_ease": "expo.out",
+    "arrival_duration_sec": 0.55,
+    "camera_ease": "power2.inOut",
+    "exit_ease": "power3.in",
+    "exit_duration_sec": 0.25,
+    "word_stagger_sec": 0.085,
+    "overlap_ratio": 0.35,
+    "avg_shot_duration_sec": 2.8
+  },
+  "preferred_registry_items": [
+    "frost-sequence-camera-orbit",
+    "glass-hero",
+    "titlecard-calm",
+    "per-word-crossfade",
+    "light-sweep-pass",
+    "grain-overlay"
+  ]
+}

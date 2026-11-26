@@ -1,0 +1,53 @@
+{
+  "preset_id": "minimalist_saas",
+  "name": "Minimalist SaaS & Product Launch Editorial",
+  "aspect_ratios": ["16:9", "9:16"],
+  "fps": 30,
+  "motion_blur": {
+    "enabled": true,
+    "shutter_angle": 360
+  },
+  "palette": {
+    "color_ground": "#F7F5F0",
+    "color_surface": "#FFFFFF",
+    "color_ink": "#0F172A",
+    "color_muted": "#64748B",
+    "color_accent": "#2563EB",
+    "color_accent_secondary": "#10B981",
+    "border_subtle": "rgba(15, 23, 42, 0.12)"
+  },
+  "typography": {
+    "font_display": "Outfit",
+    "font_body": "Inter",
+    "font_mono": "JetBrains Mono",
+    "hero_scale_vh": 7.5,
+    "subhead_scale_vh": 3.2,
+    "caption_scale_vh": 2.8,
+    "letter_spacing_display": "-0.03em"
+  },
+  "geometry": {
+    "card_radius_px": 20,
+    "pill_radius_px": 999,
+    "border_width_px": 2,
+    "action_safe_margin_pct": 10
+  },
+  "motion_grammar": {
+    "arrival_ease": "expo.out",
+    "arrival_duration_sec": 0.45,
+    "camera_ease": "power2.inOut",
+    "exit_ease": "power3.in",
+    "exit_duration_sec": 0.22,
+    "word_stagger_sec": 0.075,
+    "overlap_ratio": 0.4,
+    "avg_shot_duration_sec": 2.4
+  },
+  "preferred_registry_items": [
+    "canopy-part-title",
+    "per-word-rise",
+    "browser-device-stage",
+    "ui-3d-reveal",
+    "zoom-through-transition",
+    "caption-editorial-emphasis",
+    "grain-overlay"
+  ]
+}

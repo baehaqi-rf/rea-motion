@@ -1,0 +1,54 @@
+{
+  "preset_id": "aslaniedits_kinetic_editorial",
+  "name": "High-Contrast Rotoscoped Kinetic Editorial (@aslaniedits / Flow Style D)",
+  "aspect_ratios": ["9:16", "16:9"],
+  "fps": 30,
+  "motion_blur": {
+    "enabled": true,
+    "shutter_angle": 360
+  },
+  "palette": {
+    "color_ground": "#121214",
+    "color_ground_alt": "#7A8B7B",
+    "color_surface": "rgba(255, 255, 255, 0.08)",
+    "color_ink": "#F5F5F7",
+    "color_accent": "#CCFF00",
+    "color_accent_alt": "#FFE600",
+    "color_warm": "#FFB800",
+    "glass_border": "rgba(255, 255, 255, 0.22)"
+  },
+  "typography": {
+    "font_display": "Oswald",
+    "font_script": "Playfair Display",
+    "font_mono": "Space Mono",
+    "hero_scale_vh": 9.2,
+    "subhead_scale_vh": 3.5,
+    "caption_scale_vh": 3.4,
+    "letter_spacing_display": "-0.03em"
+  },
+  "geometry": {
+    "card_radius_px": 22,
+    "border_width_px": 1.5,
+    "film_grain_opacity": 0.06,
+    "subject_sandwich_layers": ["z0_backdrop", "z1_giant_headline", "z2_rotoscoped_subject", "z3_glass_ui_foreground"]
+  },
+  "motion_grammar": {
+    "arrival_ease": "back.out(1.4)",
+    "arrival_duration_sec": 0.35,
+    "snap_zoom_scale": 1.08,
+    "exit_ease": "power3.in",
+    "exit_duration_sec": 0.16,
+    "word_stagger_sec": 0.06,
+    "overlap_ratio": 0.45,
+    "avg_shot_duration_sec": 1.6
+  },
+  "preferred_registry_items": [
+    "caption-kinetic-slam",
+    "caption-parallax-layers",
+    "camera-rig-depth-stack",
+    "whip-pan-cut",
+    "beat-freeze-cut",
+    "vfx-liquid-glass",
+    "grain-overlay"
+  ]
+}
