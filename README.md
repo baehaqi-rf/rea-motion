@@ -18,7 +18,7 @@ Instead of spreading overlapping tools across 5 separate skills, **REA Motion** 
 rea-motion/                        # Clone directly as a single skill or run install.ps1
 ├── SKILL.md                       # Master router & 3-stage workflow
 ├── GLOBAL_LESSONS.md              # Compound cross-project rules & Windows/8GB RAM guardrails
-├── install.ps1                    # Installs `rea-motion` to ~/.gemini/config/skills/rea-motion & removes legacy splits
+├── install.ps1                    # Installs `rea-motion` to ~/.gemini/config/skills & ~/.agents/skills & removes legacy splits
 ├── lib/                           # motion.js (frame-pure math/springs/logScale) + motion.test.js
 ├── vendor/                        # Offline gsap.min.js, camera-dop.js (HFCameraDoP), vfx-cgi-suite.js (HFVfxSuite)
 ├── scripts/
@@ -54,7 +54,7 @@ git clone https://github.com/baehaqi-rf/rea-motion.git
 cd rea-motion
 powershell -ExecutionPolicy Bypass -File .\install.ps1
 ```
-`install.ps1` installs Python dependencies (`numpy`, `pillow`, `scipy`, `opencv-python-headless`, `matplotlib`), installs this repo as `~/.gemini/config/skills/rea-motion`, and removes redundant legacy folders (`hyperframes-motion-rea`, `launch-video-clone`, `reelmimic-styles`, `local-hyperframes-pro`).
+`install.ps1` installs Python dependencies (`numpy`, `pillow`, `scipy`, `opencv-python-headless`, `matplotlib`), installs this repo as `~/.gemini/config/skills/rea-motion` and `~/.agents/skills/rea-motion`, and removes redundant legacy folders (`hyperframes-motion-rea`, `launch-video-clone`, `reelmimic-styles`, `local-hyperframes-pro`).
 
 ---
 

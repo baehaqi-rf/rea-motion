@@ -1,7 +1,7 @@
 <#
 .SYNOPSIS
-    Installs REA Motion as a single unified Antigravity skill (~/.gemini/config/skills/rea-motion),
-    removes legacy fragmented skill folders, and installs Python CV/audio dependencies.
+    Installs REA Motion as a single unified skill across ~/.gemini/config/skills/rea-motion
+    and ~/.agents/skills/rea-motion, removes legacy fragmented folders, and installs Python deps.
 #>
 [CmdletBinding()]
 param(
@@ -18,7 +18,10 @@ if (-not $SkipPip) {
     python -m pip install --upgrade numpy pillow scipy opencv-python-headless matplotlib
 }
 
-$targetRoots = @((Join-Path $env:USERPROFILE ".gemini\config\skills"))
+$targetRoots = @(
+    (Join-Path $env:USERPROFILE ".gemini\config\skills"),
+    (Join-Path $env:USERPROFILE ".agents\skills")
+)
 if ($IncludeClaude) {
     $targetRoots += (Join-Path $env:USERPROFILE ".claude\skills")
 }
