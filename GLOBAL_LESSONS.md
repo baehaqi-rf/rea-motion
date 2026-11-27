@@ -19,3 +19,8 @@ Persistent engineering & motion-craft rules learned across production runs (`lau
 - **Frame-Grid Snapping:** Snap scene/transition timestamps to exact multiples of `1 / fps` (`Math.floor(f) / fps`) so sub-frame offsets never cause uneven easing velocity at cut boundaries.
 - **High-Cadence Seam Probe (`30fps tile=6x5`):** Never judge transitions or motion blur from 1fps keyframes; use `decompile.py --seam-probes` (`ffmpeg -vf "fps=30,scale=640:-1,tile=6x5"`) around hard cuts.
 - **Broadcast & Critic Gates (`motion-quality-gates`):** Fail delivery on any unintended black frames (`blackdetect d=0.04`), unintended freezes (`freezedetect > 0.5s`), or audio clipping (`true-peak > -1 dBTP`). Require a Critic pass (`writer != critic`) listing `>= 3` concrete timestamped flaws before final render.
+
+## 4. Forensic Clone Precision (`v1.2`)
+- **Use Local `hyperframes measure` Suite (Never `reverse start`):** Run `measure events --map`, `measure curve --roi`, `measure ink --at --roi`, `measure look --grid`, `measure extract --roi`, and `measure energy` locally to measure exact GSAP eases, font ink bounds, background grids, and real cropped sub-assets.
+- **Truncate Frame Timestamps Down (`floor`):** Compute `frame / fps` floored to 6 decimals (never rounded up) so shot cuts and transitions land on the intended frame rather than 1 frame late.
+- **Extract Complex Non-Text Assets (`measure extract`):** Do not rebuild intricate photographs, hand-drawn illustrations, or complex marks with crude SVG approximations; crop them cleanly from their peak-clarity source frame (`measure extract --at ... --roi ... --out ...`) and animate their wrapper in HTML/GSAP.

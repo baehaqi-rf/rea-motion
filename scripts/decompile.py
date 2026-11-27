@@ -653,6 +653,42 @@ def analyze_audio(
     return result
 
 
+def run_hf_measure_forensics(
+    hf_cmd: list[str] | None, video_path: Path, out_dir: Path, extract_strips: bool = False
+) -> dict[str, Any]:
+    """Run local open-source `hyperframes measure` probe, events --map, and optional event strips."""
+    info: dict[str, Any] = {}
+    if not hf_cmd:
+        return info
+
+    for key, subargs in (
+        ("hf_probe", ["measure", "probe", str(video_path), "--json"]),
+        ("hf_event_map", ["measure", "events", "--map", str(video_path), "--json"]),
+    ):
+        try:
+            proc = subprocess.run([*hf_cmd, *subargs], capture_output=True, text=True, timeout=90)
+            if proc.returncode == 0 and proc.stdout.strip():
+                info[key] = json.loads(proc.stdout)
+        except Exception:
+            pass
+
+    if extract_strips:
+        strips_out = out_dir / "event_strips"
+        strips_out.mkdir(parents=True, exist_ok=True)
+        try:
+            proc = subprocess.run(
+                [*hf_cmd, "measure", "frames", "--events", str(video_path), "--out", str(strips_out), "--json"],
+                capture_output=True,
+                text=True,
+                timeout=120,
+            )
+            if proc.returncode == 0:
+                info["hf_event_strips_dir"] = "event_strips"
+        except Exception:
+            pass
+    return info
+
+
 def decompile_video(args: argparse.Namespace) -> Path:
     """Run full Stage 1 decompilation and write MOTION_LEDGER.json."""
     ffmpeg, ffprobe = resolve_ffmpeg_binaries()
@@ -667,6 +703,12 @@ def decompile_video(args: argparse.Namespace) -> Path:
     meta = probe_video(ffprobe, video_path)
     effective_dur = min(meta["duration_sec"], args.max_sec) if args.max_sec else meta["duration_sec"]
     fps = meta["fps"]
+
+    hf_forensics = (
+        {}
+        if args.no_hf_measure
+        else run_hf_measure_forensics(hf_cmd, video_path, out_dir, extract_strips=args.event_strips)
+    )
 
     shots, cut_engine = detect_cuts(ffmpeg, hf_cmd, video_path, effective_dur, fps, args.scene_thresh)
     frames, pw, ph = decode_proxy_frames(
@@ -807,6 +849,8 @@ def decompile_video(args: argparse.Namespace) -> Path:
                 "stt": audio_data["stt_engine"],
             },
             **({"seam_probes": seam_probe_files} if seam_probe_files else {}),
+            **({"hf_probe": hf_forensics["hf_probe"]} if "hf_probe" in hf_forensics else {}),
+            **({"hf_event_strips_dir": hf_forensics["hf_event_strips_dir"]} if "hf_event_strips_dir" in hf_forensics else {}),
         },
         "KINETIC_DNA": {
             "bpm": audio_data["bpm"],
@@ -815,6 +859,7 @@ def decompile_video(args: argparse.Namespace) -> Path:
             "onsets_ms": audio_data["onsets_ms"],
             "rms_envelope": audio_data["rms_envelope"],
             "shots": kinetic_shots,
+            **({"hf_event_map": hf_forensics["hf_event_map"]} if "hf_event_map" in hf_forensics else {}),
         },
         "BRAND_SKIN": {
             "global_palette_hex": all_palette_hex[:10],
@@ -840,6 +885,8 @@ def main() -> int:
     parser.add_argument("--seam-probes", action="store_true", help="Extract 30fps tile=6x5 contact sheets across hard-cut seams")
     parser.add_argument("--seam-probe", type=float, default=None, help="Extract one 30fps tile=6x5 seam probe centered at timestamp (sec)")
     parser.add_argument("--seam-probe-max", type=int, default=8, help="Max seam probe grids to extract when --seam-probes is set")
+    parser.add_argument("--event-strips", action="store_true", help="Extract native consecutive frame strips per event via hyperframes measure frames --events")
+    parser.add_argument("--no-hf-measure", action="store_true", help="Skip calling local hyperframes measure probe/events CLI")
     args = parser.parse_args()
 
     ledger_path = decompile_video(args)

@@ -475,3 +475,25 @@ The prompts and workflows behind well-known launch/motion videos, summarised wit
 - **Adil / Higgsfield (408k):** one shot-list document, a name per shot, fixes target one shot.
 - **Eddy (60+ viral launch videos):** biggest outcome in 3 s, no logo first, show don't explain,
   hook → problem → solution → proof → CTA. Use it when writing a rebrand's copy.
+
+---
+
+## Forensic `hyperframes measure` Suite (Open-Source Clone Precision)
+
+Always use these local CLI subcommands (`v0.9.85+`, zero Pro billing required) alongside `burst.py` / `decompile.py`:
+
+1. **Event Windows & Native Strips:**
+   - `npx hyperframes measure events --map reference/ref.mp4 --json` → exact appear/disappear/change/hold timestamps + audio onset map.
+   - `npx hyperframes measure frames --events reference/ref.mp4 --out .motion_rea/event_strips` → consecutive native frame strip per event window.
+2. **Exact Move Easing & Overshoot:**
+   - `npx hyperframes measure curve reference/ref.mp4 --from=<s> --to=<e> --roi="x,y,w,h" --json` → returns exact start, duration, overshoot, and closest GSAP ease; add `--compare=renders/final.mp4` after rendering to measure curve delta directly.
+3. **Typography Ink Box & Backdrop Color Grid:**
+   - `npx hyperframes measure ink reference/ref.mp4 --at=<sec> --roi="x,y,w,h" --json` → exact pixel bounding box, line height, and character density of text in frame.
+   - `npx hyperframes measure look reference/ref.mp4 --at=<sec> --grid="8x6" --json` → sampled background color grid & brightness/saturation parity (`--compare=renders/final.mp4`).
+4. **Clean ROI Sub-Asset Cropping (Zero Crude SVGs):**
+   - For complex illustrations, brand icons, faces/avatars, or photos that HTML/CSS cannot draw identically:
+     `npx hyperframes measure extract reference/ref.mp4 --at=<sec> --roi="x,y,w,h" --out="hf/assets/<asset>.png"`
+5. **Energy & Full Diff Parity:**
+   - `npx hyperframes measure energy reference/ref.mp4 renders/final.mp4 --json`
+   - `npx hyperframes diff reference/ref.mp4 renders/final.mp4 --json` (or `--at="..."` before full render).
+6. **Floor Frame Timing:** Convert frame indices `F` to seconds via `Math.floor((F / fps) * 1e6) / 1e6` (truncate down, never round up) so transitions land on frame `F` cleanly.
